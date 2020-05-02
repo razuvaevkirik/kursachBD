@@ -512,9 +512,103 @@ void UserForm::setTicketsTable(QList<QString> ticketsIDs) {
         ui->ticketsTableWidget->setItem(i, 2, new QTableWidgetItem(query.value(2).toString()));
         ui->ticketsTableWidget->setItem(i, 3, new QTableWidgetItem(query.value(3).toString()));
     }
+
+    ticketsID.clear();
+    ticketsID = ticketsIDs;
+    getTicketData();
 }
 
 void UserForm::on_onMainButton_clicked()
 {
     ui->stackedWidget->setCurrentIndex(0);
+}
+
+void UserForm::getTicketData()
+{
+    QSqlQuery query;
+    int concertID, bandID, hallID;
+    ticketData.clear();
+
+    for (int i = 0; i < ticketsID.size(); i++) {
+        query.prepare("SELECT ticket_number, ticket_zone, ticket_seat, concerts_idconcerts "
+                      "FROM tickets "
+                      "WHERE idtickets = " + ticketsID.at(i));
+        query.exec();
+        query.first();
+
+        ticketData.append(query.value(0));
+        ticketData.append(query.value(1));
+        ticketData.append(query.value(2));
+
+        concertID = query.value(3).toInt();
+
+        query.prepare("SELECT concert_title, concert_date, concert_time, concert_age_limit, "
+                      "bands_idbands, halls_idhalls "
+                      "FROM concerts "
+                      "WHERE idconcerts = " + QString::number(concertID));
+        query.exec();
+        query.first();
+
+        ticketData.append(query.value(0));
+        ticketData.append(query.value(1)); //Преобразование в дату
+        ticketData.append(query.value(2));
+        ticketData.append(query.value(3));
+
+        bandID = query.value(4).toInt();
+        hallID = query.value(5).toInt();
+
+        query.prepare("SELECT band_title "
+                      "FROM bands "
+                      "WHERE idbands = " + QString::number(bandID));
+        query.exec();
+        query.first();
+
+        ticketData.append(query.value(0));
+
+        query.prepare("SELECT hall_title, hall_address "
+                      "FROM halls "
+                      "WHERE idhalls = " + QString::number(hallID));
+        query.exec();
+        query.first();
+
+        ticketData.append(query.value(0));
+        ticketData.append(query.value(1));
+    }
+}
+
+void UserForm::on_savePdfButton_clicked()
+{
+    QString html;
+    QString fileName = QFileDialog::getSaveFileName(this, "Export PDF", QString(), "*.pdf");
+    if (QFileInfo(fileName).suffix().isEmpty()) {
+        fileName.append(".pdf");
+    }
+
+    QPrinter printer(QPrinter::PrinterResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setPaperSize(QPrinter::A4);
+    printer.setOutputFileName(fileName);
+
+    for (int i = 0; i < ticketData.size() / 10; i++) {
+        html.append("<h1>" + ticketData[i * 10 + 3].toString() + "</h1>\n"); //Название концерта
+        html.append("<h2>Группа: " + ticketData[i * 10 + 7].toString() + "</h2>\n"); //Группа
+        html.append("<h2>Номер билета: " + ticketData[i * 10].toString() + "</h2>"); //Номер билета
+        html.append("<h2>Дата: " +
+                    QDate::fromString(ticketData[i * 10 + 4].toString(), "yyyy-MM-dd").toString("dd MMMM yyyy")
+                    + "</h2>"); //Дата
+        html.append("<h2>Время: " + QTime::fromString(ticketData[i * 10 + 5].toString(), "hh:mm:ss").toString("hh:mm")
+                    + "</h2>\n"); //Время
+        html.append("<h2>Возрастное ограничение: " + ticketData[i * 10 + 6].toString() + " +</h2>\n"); //Возраст
+        html.append("<h2>Зона: " + ticketData[i * 10 + 1].toString() + " </h2>"); //Зона
+        html.append("<h2>Место: " + ticketData[i * 10 + 2].toString() + "</h2>\n"); //Место
+        html.append("<h2>Концертный зал: " + ticketData[i * 10 + 8].toString() + "</h2>\n"); //Зал
+        html.append("<h2>Адрес: " + ticketData[i * 10 + 9].toString() + "</h2>\n"); //Адрес
+        if (i != ticketData.size() / 10 - 1) {
+            html.append("<br style=\"page-break-after: always\">");
+        }
+    }
+
+    QTextDocument doc;
+    doc.setHtml(html);
+    doc.print(&printer);
 }

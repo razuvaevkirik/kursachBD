@@ -669,6 +669,13 @@ QMessageBox:QPushButton:pressed {
        <item row="2" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_13">
          <item>
+          <widget class="QPushButton" name="savePdfButton">
+           <property name="text">
+            <string>Сохранить в PDF</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="horizontalSpacer_11">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -687,19 +694,6 @@ QMessageBox:QPushButton:pressed {
             <string>На главную</string>
            </property>
           </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_12">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
        </item>

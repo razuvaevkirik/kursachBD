@@ -17,6 +17,9 @@
 #include <QBuffer>
 #include <QDate>
 #include <QInputDialog>
+#include <QTextDocument>
+#include <QFileDialog>
+#include <QPrinter>
 
 namespace Ui {
 class UserForm;
@@ -57,6 +60,8 @@ private slots:
 
     void on_onMainButton_clicked();
 
+    void on_savePdfButton_clicked();
+
 private:
     Ui::UserForm *ui;
 
@@ -70,13 +75,18 @@ private:
 
     void setTicketsTable(QList<QString>);
 
+    void getTicketData();
+
     bool eventFilter(QObject *watched, QEvent *event);
 
     QString login;
 
+    QList<QString> ticketsID;
+
     QSqlQueryModel  *concertsModel, *vipTicketsModel;
 
-    QVariantList concertData, bandData, albumsData, musiciansData, hallData;
+    QVariantList    concertData, bandData, albumsData,
+                    musiciansData, hallData, ticketData;
 };
 
 #endif // USERFORM_H
