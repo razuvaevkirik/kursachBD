@@ -95,7 +95,7 @@ void MainWindow::connectToDatabase() //Подключение к бд
     db = QSqlDatabase::addDatabase("QMYSQL");
     db.setHostName("127.0.0.1");
     db.setPort(3306);
-    db.setDatabaseName("agency2");
+    db.setDatabaseName("agency3");
     db.setUserName("root");
     db.setPassword("root");
 

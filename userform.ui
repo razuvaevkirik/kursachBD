@@ -50,7 +50,7 @@ QMessageBox:QPushButton:pressed {
    <item row="0" column="0">
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>4</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="page">
       <layout class="QGridLayout" name="gridLayout_2">
@@ -164,33 +164,9 @@ QMessageBox:QPushButton:pressed {
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QLabel" name="label">
-               <property name="font">
-                <font>
-                 <pointsize>16</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Группа: </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="bandTitleLabel">
-               <property name="font">
-                <font>
-                 <pointsize>16</pointsize>
-                 <underline>true</underline>
-                </font>
-               </property>
-               <property name="cursor">
-                <cursorShape>PointingHandCursor</cursorShape>
-               </property>
+              <widget class="QTableView" name="bandsListView">
                <property name="styleSheet">
-                <string notr="true">color: blue;</string>
-               </property>
-               <property name="text">
-                <string>Название группы</string>
+                <string notr="true"/>
                </property>
               </widget>
              </item>
@@ -274,7 +250,7 @@ QMessageBox:QPushButton:pressed {
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QLabel" name="bandPicLabel">
+            <widget class="QLabel" name="concertPicLabel">
              <property name="text">
               <string>Band Pic</string>
              </property>
@@ -360,7 +336,7 @@ QMessageBox:QPushButton:pressed {
      <widget class="QWidget" name="page_3">
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
-        <layout class="QVBoxLayout" name="verticalLayout_6">
+        <layout class="QHBoxLayout" name="horizontalLayout_14">
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
@@ -393,74 +369,81 @@ QMessageBox:QPushButton:pressed {
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_7">
+          <widget class="QLabel" name="bandPicLabel">
+           <property name="text">
+            <string>TextLabel</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="1" column="0">
+        <layout class="QHBoxLayout" name="horizontalLayout_7">
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_4">
-             <item>
-              <widget class="QLabel" name="label_3">
-               <property name="font">
-                <font>
-                 <pointsize>12</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Альбомы:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPlainTextEdit" name="albumsText">
-               <property name="font">
-                <font>
-                 <pointsize>12</pointsize>
-                </font>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">background-color: transparent;</string>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <widget class="QLabel" name="label_3">
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Альбомы:</string>
+             </property>
+            </widget>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_5">
-             <item>
-              <widget class="QLabel" name="label_4">
-               <property name="font">
-                <font>
-                 <pointsize>12</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Музыканты:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPlainTextEdit" name="musiciansText">
-               <property name="font">
-                <font>
-                 <pointsize>12</pointsize>
-                </font>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">background-color: transparent;</string>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <widget class="QPlainTextEdit" name="albumsText">
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: transparent;</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <item>
+            <widget class="QLabel" name="label_4">
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Музыканты:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPlainTextEdit" name="musiciansText">
+             <property name="font">
+              <font>
+               <pointsize>12</pointsize>
+              </font>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">background-color: transparent;</string>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
            </item>
           </layout>
          </item>
         </layout>
        </item>
-       <item row="1" column="0">
+       <item row="2" column="0">
         <layout class="QHBoxLayout" name="horizontalLayout_8">
          <item>
           <widget class="QPushButton" name="bandBackButton">

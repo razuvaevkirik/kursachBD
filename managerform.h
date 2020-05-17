@@ -88,6 +88,8 @@ private slots:
 
     void on_ordersButton_clicked();
 
+    void on_chooseConcertLogoButton_clicked();
+
 private:
     Ui::ManagerForm *ui;
 
@@ -99,7 +101,7 @@ private:
 
     void getConcertsInfo(QModelIndex index);
 
-    void createTickets(int, int);
+    void createTickets(int, int, QString);
 
     QString ticketRand();
 
@@ -110,9 +112,9 @@ private:
     int bandID;
 
     QSqlTableModel  *bandInfoModel, *model, *bandAlbumsModel, *bandMusiciansModel, *bandConcertsModel,
-                    *hallInfoModel, *concertsModel, *orderInfoModel;
+                    *hallInfoModel, *concertsModel, *orderInfoModel, *bandsListModel;
 
-    QSqlQueryModel  *hallListModel, *cityListModel, *groupConcertsModel;
+    QSqlQueryModel  *hallListModel, *cityListModel, *groupConcertsModel, *bandsConcertListModel;
 };
 
 #endif // MANAGERFORM_H

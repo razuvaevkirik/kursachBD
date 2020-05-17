@@ -62,6 +62,8 @@ private slots:
 
     void on_savePdfButton_clicked();
 
+    void setBandInfo(QModelIndex);
+
 private:
     Ui::UserForm *ui;
 
@@ -77,13 +79,11 @@ private:
 
     void getTicketData();
 
-    bool eventFilter(QObject *watched, QEvent *event);
-
     QString login;
 
-    QList<QString> ticketsID;
+    QList<QString> ticketsID, bandsTitles;
 
-    QSqlQueryModel  *concertsModel, *vipTicketsModel;
+    QSqlQueryModel  *concertsModel, *vipTicketsModel, *bandsListModel;
 
     QVariantList    concertData, bandData, albumsData,
                     musiciansData, hallData, ticketData;

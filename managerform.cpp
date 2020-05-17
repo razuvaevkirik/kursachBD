@@ -30,6 +30,8 @@ ManagerForm::~ManagerForm()
     delete concertsModel;
     delete groupConcertsModel;
     delete orderInfoModel;
+    delete bandsListModel;
+    delete bandsConcertListModel;
 }
 
 void ManagerForm::recieveData(QString str)
@@ -299,15 +301,25 @@ void ManagerForm::on_addMusicianButton_clicked()
 void ManagerForm::getConcertsInfo(QModelIndex index)
 {
     groupConcertsModel = new QSqlQueryModel(this);
-    groupConcertsModel->setQuery("SELECT concert_title, concert_date, concert_time, concert_duration "
-                                "FROM concerts WHERE bands_idbands = "
+    groupConcertsModel->setQuery("SELECT * "
+                                "FROM concerts_bands "
+                                 "INNER JOIN concerts ON idconcerts = concerts_idconcerts "
+                                 "WHERE bands_idbands = "
                                 + model->data(model->index(index.row(), 0)).toString());
-    groupConcertsModel->setHeaderData(0, Qt::Horizontal, "Название");
-    groupConcertsModel->setHeaderData(1, Qt::Horizontal, "Дата");
-    groupConcertsModel->setHeaderData(2, Qt::Horizontal, "Время");
-    groupConcertsModel->setHeaderData(3, Qt::Horizontal, "Продолжительность");
+    groupConcertsModel->setHeaderData(4, Qt::Horizontal, "Название");
+    groupConcertsModel->setHeaderData(5, Qt::Horizontal, "Дата");
+    groupConcertsModel->setHeaderData(6, Qt::Horizontal, "Время");
+    groupConcertsModel->setHeaderData(7, Qt::Horizontal, "Продолжительность");
 
     ui->concertsView->setModel(groupConcertsModel);
+
+    ui->concertsView->setColumnHidden(0, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(1, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(2, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(3, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(8, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(9, true);    // Скрываем колонку с id записей
+    ui->concertsView->setColumnHidden(10, true);    // Скрываем колонку с id записей
 
     // Разрешаем выделение строк
     ui->concertsView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -497,7 +509,6 @@ void ManagerForm::on_concertsButton_clicked()
     ui->stackedWidget->setCurrentIndex(5);
     this->showMaximized();
 
-    ui->concertsBandLabel->clear();
     ui->concertsHallLabel->clear();
 
     concertsModel = new QSqlTableModel(this);
@@ -536,15 +547,38 @@ void ManagerForm::on_concertsButton_clicked()
 
 void ManagerForm::getConcertDetails(QModelIndex index)
 {
+    //Получение списка групп, участвующих в концерте
     QSqlQuery query;
-    query.prepare("SELECT band_title FROM bands WHERE idbands = "
-                  + concertsModel->data(concertsModel->index(index.row(), 6)).toString());
-    query.exec();
-    query.first();
-    ui->concertsBandLabel->setText(query.value(0).toString());
+
+    bandsConcertListModel = new QSqlQueryModel(this);
+    bandsConcertListModel->setQuery("SELECT * "
+                                "FROM concerts_bands INNER JOIN bands on idbands = bands_idbands "
+                                "WHERE concerts_idconcerts = "
+                                + concertsModel->data(concertsModel->index(index.row(), 0)).toString());
+
+    bandsConcertListModel->setHeaderData(4, Qt::Horizontal, "Группы");
+
+    ui->bandsConcertListView->setModel(bandsConcertListModel);
+
+    //0-9 скрыть
+    ui->bandsConcertListView->setColumnHidden(0, true);    // Скрываем колонку с id записей
+    ui->bandsConcertListView->setColumnHidden(1, true);    // Скрываем колонку с id группы
+    ui->bandsConcertListView->setColumnHidden(2, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(3, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(5, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(6, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(7, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(8, true);    // Скрываем колонку с id зала
+    ui->bandsConcertListView->setColumnHidden(9, true);    // Скрываем колонку с id зала
+
+    ui->bandsConcertListView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    //Запрещаем выделение
+    ui->bandsConcertListView->setSelectionMode(QAbstractItemView::NoSelection);
+
+    ui->bandsConcertListView->horizontalHeader()->setStretchLastSection(true);
 
     query.prepare("SELECT hall_title FROM halls WHERE idhalls = "
-                  + concertsModel->data(concertsModel->index(index.row(), 7)).toString());
+                  + concertsModel->data(concertsModel->index(index.row(), 6)).toString());
     query.exec();
     query.first();
     ui->concertsHallLabel->setText(query.value(0).toString());
@@ -562,9 +596,8 @@ void ManagerForm::on_addConcertButton_clicked()
     this->resize(200, 200);
     moveToCenter();
 
-    ui->bandsComboBox->clear();
+    ui->concertPicLabel->clear();
     ui->hallsComboBox->clear();
-    ui->bandsComboBox->addItem("Выберите группу");
     ui->hallsComboBox->addItem("Выберите площадку");
     ui->concertTitleLineEdit->clear();
     ui->concertDateEdit->setDate(QDate::currentDate());
@@ -575,17 +608,46 @@ void ManagerForm::on_addConcertButton_clicked()
     ui->concertTitleLineEdit->setFocus();
 
     QSqlQuery query;
-    query.prepare("SELECT band_title FROM bands");
-    query.exec();
-    while (query.next()) {
-        ui->bandsComboBox->addItem(query.value(0).toString());
-    }
-
     query.prepare("SELECT hall_title FROM halls");
     query.exec();
     while (query.next()) {
         ui->hallsComboBox->addItem(query.value(0).toString());
     }
+
+    bandsListModel = new QSqlTableModel(this);
+    bandsListModel->setTable("bands");
+    bandsListModel->setSort(1, Qt::SortOrder::AscendingOrder);
+
+    bandsListModel->setHeaderData(1, Qt::Horizontal, "Название группы");
+
+    ui->bandListView->setModel(bandsListModel);
+
+    ui->bandListView->setColumnHidden(0, true);    // Скрываем колонку с id записей
+    ui->bandListView->setColumnHidden(2, true);    // Скрываем колонку со страной
+    ui->bandListView->setColumnHidden(3, true);    // Скрываем колонку с языком
+    ui->bandListView->setColumnHidden(4, true);    // Скрываем колонку с информацией
+    ui->bandListView->setColumnHidden(5, true);    // Скрываем колонку с годом основания
+    ui->bandListView->setColumnHidden(6, true);    // Скрываем колонку с логотипом
+
+    // Разрешаем выделение строк
+    ui->bandListView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    // Устанавливаем режим выделения лишь одной строки в таблице
+    ui->bandListView->setSelectionMode(QAbstractItemView::MultiSelection);
+    // Устанавливаем размер колонок по содержимому
+    ui->bandListView->resizeColumnsToContents();
+
+    ui->bandListView->horizontalHeader()->setStretchLastSection(true);
+
+    bandsListModel->select();
+}
+
+void ManagerForm::on_chooseConcertLogoButton_clicked()
+{
+    url = QFileDialog::getOpenFileName(this, tr("Open File"),
+                                               "/home",
+                                               tr("Images (*.png *.xpm *.jpg)"));
+    QPixmap inPixmap(url);
+    ui->concertPicLabel->setPixmap(inPixmap.scaled(200, 200));
 }
 
 void ManagerForm::on_addConcertCancelButton_clicked()
@@ -595,25 +657,23 @@ void ManagerForm::on_addConcertCancelButton_clicked()
 
 void ManagerForm::on_confirmAddConcertButton_clicked()
 {
-    if (ui->bandsComboBox->currentText() != "Выберите группу"
-            && ui->hallsComboBox->currentText() != "Выберите площадку"
+    if (ui->hallsComboBox->currentText() != "Выберите площадку"
             && ui->concertTitleLineEdit->text() != ""
             && ui->concertDateEdit->date() >= QDate::currentDate()) {
         QVariantList data;
+        QPixmap inPixmap(url);
+        QByteArray inByteArray;                             // Создаём объект QByteArray для сохранения изображения
+        QBuffer inBuffer(&inByteArray);                   // Сохранение изображения производим через буффер
+        inBuffer.open(QIODevice::WriteOnly);              // Открываем буффер
+        inPixmap.save(&inBuffer, "JPG");
         data.append(ui->concertTitleLineEdit->text());
         data.append(ui->concertDateEdit->date());
         data.append(ui->concertTimeEdit->time());
         data.append(ui->concertDurationEdit->time());
         data.append(ui->concertAgeEdit->value());
 
-        QSqlQuery query;
-        query.prepare("SELECT idbands FROM bands WHERE band_title = '"
-                      + ui->bandsComboBox->currentText() + "'");
-        query.exec();
-        while (query.next()) {
-            data.append(query.value(0));
-        }
 
+        QSqlQuery query;
         query.prepare("SELECT idhalls FROM halls WHERE hall_title = '"
                       + ui->hallsComboBox->currentText() + "'");
         query.exec();
@@ -621,30 +681,56 @@ void ManagerForm::on_confirmAddConcertButton_clicked()
             data.append(query.value(0));
         }
 
+        data.append(inByteArray);
+
         query.prepare("INSERT INTO concerts (  concert_title, "
                                             "concert_date, "
                                             "concert_time, "
                                             "concert_duration, "
                                             "concert_age_limit, "
-                                            "bands_idbands, "
-                                            "halls_idhalls )"
-                      "VALUES (:Title, :Date, :Time, :Dur, :Age, :BandID, :HallID)");
+                                            "halls_idhalls,"
+                                            "concert_logo )"
+                      "VALUES (:Title, :Date, :Time, :Dur, :Age, :HallID, :Logo)");
         query.bindValue(":Title",           data[0].toString());
         query.bindValue(":Date",            data[1].toString());
         query.bindValue(":Time",            data[2].toString());
         query.bindValue(":Dur",             data[3].toString());
         query.bindValue(":Age",             data[4].toInt());
-        query.bindValue(":BandID",          data[5].toInt());
-        query.bindValue(":HallID",          data[6].toInt());
+        query.bindValue(":HallID",          data[5].toInt());
+        query.bindValue(":Logo",            data[6].toByteArray());
 
         // После чего выполняется запросом методом exec()
         if (!query.exec()) {
-            qDebug() << "error insert into halls";
+            qDebug() << "error insert into concerts";
             qDebug() << query.lastError().text();
         }
         else {
-            QMessageBox::warning(this, "Шик", "Концерт успешно добавлен!");
-            createTickets(ui->vipCostEdit->text().toInt(), ui->danceCostEdit->text().toInt());
+            //Добавление записей в таблицу concerts_bands
+            QItemSelectionModel *select = ui->bandListView->selectionModel();
+            QList<QModelIndex> ids = select->selectedRows();
+            QList<QString> bandIDs;
+            QString concertID;
+
+            for (int i = 0; i < ids.size(); i++) {
+                bandIDs.append(bandsListModel->data(bandsListModel->index(ids.at(i).row(), 0)).toString());
+            }
+
+            query.prepare("SELECT idconcerts FROM concerts WHERE idconcerts = LAST_INSERT_ID()");
+            query.exec();
+            query.first();
+            concertID = query.value(0).toString();
+
+            for (int i = 0; i < bandIDs.size(); i++) {
+                query.prepare("INSERT INTO concerts_bands (concerts_idconcerts, bands_idbands) "
+                              "VALUES (" + concertID + ", " + bandIDs.at(i) + ")");
+                if (!query.exec()) {
+                    qDebug() << query.lastError().text();
+                }
+            }
+
+            //Генерация и добавление билетов в бд
+            createTickets(ui->vipCostEdit->text().toInt(), ui->danceCostEdit->text().toInt(), concertID);
+            QMessageBox::warning(this, "Выполнено", "Концерт успешно добавлен!");
             on_concertsButton_clicked();
         }
     }
@@ -655,17 +741,18 @@ void ManagerForm::on_confirmAddConcertButton_clicked()
 }
 
 
-void ManagerForm::createTickets(int sitCost, int danceCost)
+void ManagerForm::createTickets(int sitCost, int danceCost, QString concertID)
 {
     QSqlQuery query;
-    QString hallID, concertID, ticketNumber;
+    QString hallID, ticketNumber;
     int sitPlaces, dancePlaces;
 
-    query.prepare("SELECT halls_idhalls, idconcerts FROM concerts WHERE idconcerts = LAST_INSERT_ID()");
-    query.exec();
+    query.prepare("SELECT halls_idhalls FROM concerts WHERE idconcerts = " + concertID);
+    if (!query.exec()) {
+        qDebug() << query.lastError().text();
+    }
     query.first();
     hallID = query.value(0).toString();
-    concertID = query.value(1).toString();
     query.prepare("SELECT hall_sitting_places, hall_dance_places FROM halls WHERE idhalls = " +
                   hallID);
     query.exec();
@@ -750,6 +837,7 @@ void ManagerForm::on_ordersButton_clicked()
     ui->ordersTableView->setModel(orderInfoModel);
 
     ui->ordersTableView->setColumnHidden(0, true);    //Скрываем колонку с id записей
+    ui->ordersTableView->setColumnHidden(6, true);    //Скрываем колонку с id пользователей
 
     // Разрешаем выделение строк
     ui->ordersTableView->setSelectionBehavior(QAbstractItemView::SelectRows);

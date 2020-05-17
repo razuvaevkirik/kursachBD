@@ -8,7 +8,6 @@ UserForm::UserForm(QWidget *parent) :
     ui->setupUi(this);
 
     ui->stackedWidget->setCurrentIndex(0);
-    ui->bandTitleLabel->installEventFilter(this);
 
     getCities();
 
@@ -20,6 +19,7 @@ UserForm::~UserForm()
     delete ui;
     delete concertsModel;
     delete vipTicketsModel;
+    delete bandsListModel;
 }
 
 void UserForm::recieveData(QString str)
@@ -52,13 +52,11 @@ void UserForm::getConcertsInfo()
 {
     concertsModel = new QSqlQueryModel(this);
     concertsModel->setQuery("SELECT * FROM concerts INNER JOIN halls on idhalls = halls_idhalls "
-                            "INNER JOIN agency2.bands on idbands = bands_idbands "
                             "WHERE hall_city = '" + ui->citiesComboBox->currentText() + "'"
                             " AND concert_date >= '" + QDate::currentDate().toString("yyyy-MM-dd") + "'");
     concertsModel->setHeaderData(1, Qt::Horizontal, "Название концерта");
     concertsModel->setHeaderData(2, Qt::Horizontal, "Дата");
     concertsModel->setHeaderData(9, Qt::Horizontal, "Концертный зал");
-    concertsModel->setHeaderData(17, Qt::Horizontal, "Название группы");
 
     ui->concertsView->setModel(concertsModel);
 
@@ -77,11 +75,6 @@ void UserForm::getConcertsInfo()
     ui->concertsView->setColumnHidden(14, true);
     ui->concertsView->setColumnHidden(15, true);
     ui->concertsView->setColumnHidden(16, true);
-    ui->concertsView->setColumnHidden(18, true);
-    ui->concertsView->setColumnHidden(19, true);
-    ui->concertsView->setColumnHidden(20, true);
-    ui->concertsView->setColumnHidden(21, true);
-    ui->concertsView->setColumnHidden(22, true);
 
     // Разрешаем выделение строк
     ui->concertsView->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -121,37 +114,117 @@ void UserForm::getConcertInfo(int concertID)
     hallData.clear();
     QSqlQuery query;
     int freeDance, freeVIP;
+    QList<QString> bandIDs;
 
     //Получение записи концерта
     query.prepare("SELECT * FROM concerts WHERE idconcerts = " + QString::number(concertID));
     query.exec();
     while(query.next()) {
-        concertData.append(query.value(0));
-        concertData.append(query.value(1));
-        concertData.append(query.value(2));
-        concertData.append(query.value(3));
-        concertData.append(query.value(4));
-        concertData.append(query.value(5));
-        concertData.append(query.value(6));
-        concertData.append(query.value(7));
+        concertData.append(query.value(0)); //ID
+        concertData.append(query.value(1)); //Название
+        concertData.append(query.value(2)); //Дата
+        concertData.append(query.value(3)); //Время
+        concertData.append(query.value(4)); //Продолжительность
+        concertData.append(query.value(5)); //Возрастное ограничение
+        concertData.append(query.value(6)); //ID зала
+        concertData.append(query.value(7)); //Логотип
     }
 
     //Получение записи зала
-    query.prepare("SELECT * FROM halls WHERE idhalls = " + concertData[7].toString());
+    query.prepare("SELECT * FROM halls WHERE idhalls = " + concertData[6].toString());
     query.exec();
     while(query.next()) {
-        hallData.append(query.value(0));
-        hallData.append(query.value(1));
-        hallData.append(query.value(2));
-        hallData.append(query.value(3));
-        hallData.append(query.value(4));
-        hallData.append(query.value(5));
-        hallData.append(query.value(6));
-        hallData.append(query.value(7));
+        hallData.append(query.value(0)); //ID
+        hallData.append(query.value(1)); //Название
+        hallData.append(query.value(2)); //Город
+        hallData.append(query.value(3)); //Адрес
+        hallData.append(query.value(4)); //Метро
+        hallData.append(query.value(5)); //Места VIP
+        hallData.append(query.value(6)); //Места танц-партера
+        hallData.append(query.value(7)); //Схема
     }
 
+    query.prepare("SELECT COUNT(*) FROM tickets WHERE ticket_is_free = 1 "
+                  "AND ticket_zone = 'dance' AND concerts_idconcerts = "
+                  + QString::number(concertID));
+    query.exec();
+    query.first();
+    freeDance = query.value(0).toInt();
+
+    query.prepare("SELECT COUNT(*) FROM tickets WHERE ticket_is_free = 1 "
+                  "AND ticket_zone = 'VIP' AND concerts_idconcerts = "
+                  + QString::number(concertID));
+    query.exec();
+    query.first();
+    freeVIP = query.value(0).toInt();
+
+    setConcertInfo(freeDance, freeVIP);
+}
+
+void UserForm::setConcertInfo(int freeDance, int freeVIP)
+{
+    QPixmap outPixmap = QPixmap();
+    outPixmap.loadFromData(concertData[7].toByteArray());
+
+    //Отображение информации на странице концерта
+    ui->concertPicLabel->setPixmap(outPixmap.scaled(this->width()/2, this->height()/2));
+    ui->concertTitleLabel->setText(concertData[1].toString());
+    ui->dateLabel->setText("Дата: " + QDate::fromString(concertData[2].toString(), "yyyy-MM-dd").toString("dd MMMM yyyy"));
+    ui->timeLabel->setText("Время: " + concertData[3].toString());
+    ui->ageLabel->setText("Возраст: " + concertData[5].toString() + "+");
+    ui->hallTitleLabel->setText("Клуб: " + hallData[1].toString());
+    ui->hallAddressLabel->setText("Адрес: " + hallData[3].toString());
+    ui->danceLabel->setText(QString::number(freeDance) + " билетов в танц-партер");
+    ui->vipLabel->setText(QString::number(freeVIP) + " билетов в VIP");
+
+    bandsListModel = new QSqlQueryModel(this);
+    bandsListModel->setQuery("SELECT * FROM concerts_bands INNER JOIN bands on idbands = bands_idbands "
+                             "WHERE concerts_idconcerts = "
+                              + QString::number(concertData[0].toInt()));
+    bandsListModel->setHeaderData(4, Qt::Horizontal, "Участники:");
+
+    ui->bandsListView->setModel(bandsListModel);
+
+    //Скрываем ненужные колонки
+    ui->bandsListView->setColumnHidden(0, true);
+    ui->bandsListView->setColumnHidden(1, true);
+    ui->bandsListView->setColumnHidden(2, true);
+    ui->bandsListView->setColumnHidden(3, true); //ID группы
+    ui->bandsListView->setColumnHidden(5, true);
+    ui->bandsListView->setColumnHidden(6, true);
+    ui->bandsListView->setColumnHidden(7, true);
+    ui->bandsListView->setColumnHidden(8, true);
+    ui->bandsListView->setColumnHidden(9, true);
+
+    // Разрешаем выделение строк
+    ui->bandsListView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    // Устанавливаем режим выделения лишь одной строки в таблице
+    ui->bandsListView->setSelectionMode(QAbstractItemView::SingleSelection);
+    // Устанавливаем размер колонок по содержимому
+    ui->bandsListView->resizeColumnsToContents();
+    ui->bandsListView->setEditTriggers(QAbstractItemView::NoEditTriggers);  // Запрещаем редактирование
+    ui->bandsListView->horizontalHeader()->setStretchLastSection(true);
+    ui->bandsListView->verticalHeader()->hide();
+
+    connect(ui->bandsListView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(setBandInfo(QModelIndex)));
+}
+
+void UserForm::setBandInfo(QModelIndex index)
+{
+    ui->albumsText->clear();
+    ui->bandText->clear();
+    ui->musiciansText->clear();
+    bandData.clear();
+    albumsData.clear();
+    musiciansData.clear();
+
+    qDebug() << bandsListModel->data(bandsListModel->index(index.row(), 3)).toString();
+    QSqlQuery query;
+    QPixmap outPixmap = QPixmap();
+
     //Получение записи группы
-    query.prepare("SELECT * FROM bands WHERE idbands = " + concertData[6].toString());
+    query.prepare("SELECT * FROM bands WHERE idbands = "
+                  + bandsListModel->data(bandsListModel->index(index.row(), 3)).toString());
     query.exec();
     while(query.next()) {
         bandData.append(query.value(0));
@@ -162,6 +235,9 @@ void UserForm::getConcertInfo(int concertID)
         bandData.append(query.value(5));
         bandData.append(query.value(6));
     }
+
+    outPixmap.loadFromData(bandData[6].toByteArray());
+    ui->bandPicLabel->setPixmap(outPixmap.scaled(this->width()/2, this->height()/2));
 
     query.prepare("SELECT * FROM albums WHERE bands_idbands = " + bandData[0].toString());
     query.exec();
@@ -186,41 +262,6 @@ void UserForm::getConcertInfo(int concertID)
         musiciansData.append(query.value(4));
     }
 
-    query.prepare("SELECT COUNT(*) FROM tickets WHERE ticket_is_free = 1 "
-                  "AND ticket_zone = 'dance' AND concerts_idconcerts = "
-                  + QString::number(concertID));
-    query.exec();
-    query.first();
-    freeDance = query.value(0).toInt();
-
-    query.prepare("SELECT COUNT(*) FROM tickets WHERE ticket_is_free = 1 "
-                  "AND ticket_zone = 'VIP' AND concerts_idconcerts = "
-                  + QString::number(concertID));
-    query.exec();
-    query.first();
-    freeVIP = query.value(0).toInt();
-
-    setConcertInfo(freeDance, freeVIP);
-}
-
-void UserForm::setConcertInfo(int freeDance, int freeVIP)
-{
-    QPixmap outPixmap = QPixmap();
-    outPixmap.loadFromData(bandData[6].toByteArray());
-
-    //Отображение информации на странице концерта
-    ui->bandPicLabel->setPixmap(outPixmap.scaled(this->width()/2, this->height()/2));
-    ui->concertTitleLabel->setText(concertData[1].toString());
-    ui->bandTitleLabel->setText(bandData[1].toString());
-    ui->dateLabel->setText("Дата: " + QDate::fromString(concertData[2].toString(), "yyyy-MM-dd").toString("dd MMMM yyyy"));
-    ui->timeLabel->setText("Время: " + concertData[3].toString());
-    ui->ageLabel->setText("Возраст: " + concertData[5].toString() + "+");
-    ui->hallTitleLabel->setText("Клуб: " + hallData[1].toString());
-    ui->hallAddressLabel->setText("Адрес: " + hallData[3].toString());
-    ui->danceLabel->setText(QString::number(freeDance) + " билетов в танц-партер");
-    ui->vipLabel->setText(QString::number(freeVIP) + " билетов в VIP");
-
-    ui->albumsText->clear();
     //Отображение информации на странице группы
     ui->bandText->setPlainText( "Название группы: " + bandData[1].toString()
                                 + "\r\n\r\nСтрана: " + bandData[2].toString()
@@ -290,18 +331,7 @@ void UserForm::setConcertInfo(int freeDance, int freeVIP)
     ui->bandText->moveCursor(QTextCursor::Start);
     ui->albumsText->moveCursor(QTextCursor::Start);
     ui->musiciansText->moveCursor(QTextCursor::Start);
-}
-
-bool UserForm::eventFilter(QObject *watched, QEvent *event)
-{
-    if(watched == ui->bandTitleLabel)
-    {
-        if(event->type() == QEvent::MouseButtonPress)
-        {
-            ui->stackedWidget->setCurrentIndex(2);
-        }
-    }
-    return false;
+    ui->stackedWidget->setCurrentIndex(2);
 }
 
 void UserForm::on_bandBackButton_clicked()
@@ -399,12 +429,13 @@ void UserForm::on_confirmBuyButton_clicked()
             query.exec();
             query.first();
 
-            //Заполнение массива данных о для записи заказа
+            //Заполнение массива данных для записи заказа
             orderData.append(query.value(3).toString());
             orderData.append(query.value(4).toString());
             orderData.append(query.value(5).toString());
             orderData.append(QDate::currentDate().toString("yyyy-MM-dd"));
             orderData.append(price);
+            orderData.append(query.value(0).toString());
         }
         else {
             bool bOk;
@@ -434,18 +465,36 @@ void UserForm::on_confirmBuyButton_clicked()
 
         }
 
-        query.prepare("INSERT INTO orders ( buyer_first_name, "
-                                            "buyer_last_name, "
-                                            "buyer_mail, "
-                                            "order_date, "
-                                            "order_amount )"
-                      "VALUES (:First_Name, :Last_Name, :Mail, :Date, :Amount)");
+        if (login != "") {
+            query.prepare("INSERT INTO orders ( buyer_first_name, "
+                                                "buyer_last_name, "
+                                                "buyer_mail, "
+                                                "order_date, "
+                                                "order_amount, "
+                                                "users_idusers )"
+                          "VALUES (:First_Name, :Last_Name, :Mail, :Date, :Amount, :ID)");
 
-        query.bindValue(":First_Name",          orderData[0]);
-        query.bindValue(":Last_Name",           orderData[1]);
-        query.bindValue(":Mail",                orderData[2]);
-        query.bindValue(":Date",                orderData[3]);
-        query.bindValue(":Amount",              orderData[4].toString());
+            query.bindValue(":First_Name",          orderData[0]);
+            query.bindValue(":Last_Name",           orderData[1]);
+            query.bindValue(":Mail",                orderData[2]);
+            query.bindValue(":Date",                orderData[3]);
+            query.bindValue(":Amount",              orderData[4].toString());
+            query.bindValue(":ID",                  orderData[5]);
+        } else {
+            query.prepare("INSERT INTO orders ( buyer_first_name, "
+                                                "buyer_last_name, "
+                                                "buyer_mail, "
+                                                "order_date, "
+                                                "order_amount )"
+                          "VALUES (:First_Name, :Last_Name, :Mail, :Date, :Amount)");
+
+            query.bindValue(":First_Name",          orderData[0]);
+            query.bindValue(":Last_Name",           orderData[1]);
+            query.bindValue(":Mail",                orderData[2]);
+            query.bindValue(":Date",                orderData[3]);
+            query.bindValue(":Amount",              orderData[4].toString());
+        }
+
 
         // После чего выполняется запросом методом exec()
         if(!query.exec()) {
@@ -526,8 +575,10 @@ void UserForm::on_onMainButton_clicked()
 void UserForm::getTicketData()
 {
     QSqlQuery query;
-    int concertID, bandID, hallID;
+    int concertID, hallID;
+    QList<QString> bandsID;
     ticketData.clear();
+    bandsTitles.clear();
 
     for (int i = 0; i < ticketsID.size(); i++) {
         query.prepare("SELECT ticket_number, ticket_zone, ticket_seat, concerts_idconcerts "
@@ -536,34 +587,27 @@ void UserForm::getTicketData()
         query.exec();
         query.first();
 
-        ticketData.append(query.value(0));
-        ticketData.append(query.value(1));
-        ticketData.append(query.value(2));
+        ticketData.append(query.value(0)); //Номер билета   [0]
+        ticketData.append(query.value(1)); //Зона билета    [1]
+        ticketData.append(query.value(2)); //Место          [2]
 
-        concertID = query.value(3).toInt();
+        concertID = query.value(3).toInt(); //ID концерта
 
         query.prepare("SELECT concert_title, concert_date, concert_time, concert_age_limit, "
-                      "bands_idbands, halls_idhalls "
+                      "halls_idhalls "
                       "FROM concerts "
                       "WHERE idconcerts = " + QString::number(concertID));
         query.exec();
         query.first();
 
-        ticketData.append(query.value(0));
-        ticketData.append(query.value(1)); //Преобразование в дату
-        ticketData.append(query.value(2));
-        ticketData.append(query.value(3));
+        ticketData.append(query.value(0));  //Название концерта         [3]
+        ticketData.append(query.value(1));  //Дата концерта             [4]
+        ticketData.append(query.value(2));  //Время концерта            [5]
+        ticketData.append(query.value(3));  //Возрастное ограничение    [6]
 
-        bandID = query.value(4).toInt();
-        hallID = query.value(5).toInt();
+        hallID = query.value(4).toInt();
 
-        query.prepare("SELECT band_title "
-                      "FROM bands "
-                      "WHERE idbands = " + QString::number(bandID));
-        query.exec();
-        query.first();
 
-        ticketData.append(query.value(0));
 
         query.prepare("SELECT hall_title, hall_address "
                       "FROM halls "
@@ -571,8 +615,24 @@ void UserForm::getTicketData()
         query.exec();
         query.first();
 
-        ticketData.append(query.value(0));
-        ticketData.append(query.value(1));
+        ticketData.append(query.value(0)); //Название концертного зала  [7]
+        ticketData.append(query.value(1)); //Адрес зала                 [8]
+    }
+
+    query.prepare("SELECT bands_idbands FROM concerts_bands "
+                  "WHERE concerts_idconcerts = " + QString::number(concertID));
+    query.exec();
+    while (query.next()) {
+        bandsID.append(query.value(0).toString());
+    }
+
+    for (int i = 0; i < bandsID.size(); i++) {
+        query.prepare("SELECT band_title "
+                      "FROM bands "
+                      "WHERE idbands = " + bandsID.at(i));
+        query.exec();
+        query.first();
+        bandsTitles.append(query.value(0).toString());
     }
 }
 
@@ -589,21 +649,31 @@ void UserForm::on_savePdfButton_clicked()
     printer.setPaperSize(QPrinter::A4);
     printer.setOutputFileName(fileName);
 
-    for (int i = 0; i < ticketData.size() / 10; i++) {
-        html.append("<h1>" + ticketData[i * 10 + 3].toString() + "</h1>\n"); //Название концерта
-        html.append("<h2>Группа: " + ticketData[i * 10 + 7].toString() + "</h2>\n"); //Группа
-        html.append("<h2>Номер билета: " + ticketData[i * 10].toString() + "</h2>"); //Номер билета
+    for (int i = 0; i < ticketData.size() / 9; i++) {
+        html.append("<h1>" + ticketData[i * 9 + 3].toString() + "</h1>\n"); //Название концерта
+
+        //Группы
+        if (bandsTitles.size() <= 1) {
+            html.append("<h2>Группа: " + bandsTitles.at(0) + "</h2>\n");
+        } else {
+            html.append("<h2>Группы:</h2>\n\n");
+            for (int j = 0; j < bandsTitles.size(); j++) {
+                    html.append("<h2>" + bandsTitles.at(j) + "</h2>\n");
+            }
+        }
+
+        html.append("<h2>Номер билета: " + ticketData[i * 9].toString() + "</h2>"); //Номер билета
         html.append("<h2>Дата: " +
-                    QDate::fromString(ticketData[i * 10 + 4].toString(), "yyyy-MM-dd").toString("dd MMMM yyyy")
+                    QDate::fromString(ticketData[i * 9 + 4].toString(), "yyyy-MM-dd").toString("dd MMMM yyyy")
                     + "</h2>"); //Дата
-        html.append("<h2>Время: " + QTime::fromString(ticketData[i * 10 + 5].toString(), "hh:mm:ss").toString("hh:mm")
+        html.append("<h2>Время: " + QTime::fromString(ticketData[i * 9 + 5].toString(), "hh:mm:ss").toString("hh:mm")
                     + "</h2>\n"); //Время
-        html.append("<h2>Возрастное ограничение: " + ticketData[i * 10 + 6].toString() + " +</h2>\n"); //Возраст
-        html.append("<h2>Зона: " + ticketData[i * 10 + 1].toString() + " </h2>"); //Зона
-        html.append("<h2>Место: " + ticketData[i * 10 + 2].toString() + "</h2>\n"); //Место
-        html.append("<h2>Концертный зал: " + ticketData[i * 10 + 8].toString() + "</h2>\n"); //Зал
-        html.append("<h2>Адрес: " + ticketData[i * 10 + 9].toString() + "</h2>\n"); //Адрес
-        if (i != ticketData.size() / 10 - 1) {
+        html.append("<h2>Возрастное ограничение: " + ticketData[i * 9 + 6].toString() + " +</h2>\n"); //Возраст
+        html.append("<h2>Зона: " + ticketData[i * 9 + 1].toString() + " </h2>"); //Зона
+        html.append("<h2>Место: " + ticketData[i * 9 + 2].toString() + "</h2>\n"); //Место
+        html.append("<h2>Концертный зал: " + ticketData[i * 9 + 7].toString() + "</h2>\n"); //Зал
+        html.append("<h2>Адрес: " + ticketData[i * 9 + 8].toString() + "</h2>\n"); //Адрес
+        if (i != ticketData.size() / 9 - 1) {
             html.append("<br style=\"page-break-after: always\">");
         }
     }
